@@ -16,33 +16,32 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Miniconda and activate environment
+      - name: Set up Miniconda and create environment
         uses: conda-incubator/setup-miniconda@v3
         with:
           auto-update-conda: true
-          python-version: 3.12 # Pastikan sesuai dengan conda.yaml
-          activate-environment: mlflow-env # Nama lingkungan dari conda.yaml Anda
-          # ✅ PENTING: Gunakan parameter `environment-file` di sini
-          environment-file: MLProject/conda.yaml # Ini akan membuat dan mengisi lingkungan
+          python-version: 3.12
+          environment-file: MLProject/conda.yaml # Buat lingkungan dari file ini
+          # Kita tidak menggunakan `activate-environment` di sini agar lebih manual kontrol
+          # agar kita bisa memastikan aktivasi di setiap `run` command.
 
       - name: Conda info (for debugging)
+        # ✅ Selalu aktifkan lingkungan di setiap blok `run` jika tidak yakin sudah aktif
         run: |
+          conda activate mlflow-env # Aktifkan lingkungan di sini
           conda info
           conda env list
-          conda activate mlflow-env # Pastikan lingkungan aktif
-          conda list # Lihat semua paket yang terinstal
-
-      # ✅ Hapus langkah 'Create and activate Conda environment from conda.yaml' yang sebelumnya ada
-      # Langkah ini tidak lagi diperlukan karena 'setup-miniconda' sudah menanganinya
+          conda list
 
       - name: Run MLflow Project
         run: |
-          conda activate mlflow-env # Pastikan lingkungan tetap aktif (walaupun seharusnya sudah aktif)
+          conda activate mlflow-env # ✅ Aktifkan lingkungan di sini lagi
           cd MLProject
           mlflow run . -P data_path=HDS_preprocessing.csv
 
       - name: Verify MLflow Run (Optional)
         run: |
+          conda activate mlflow-env # ✅ Aktifkan lingkungan di sini lagi
           if [ -d "MLProject/mlruns" ]; then
             echo "MLflow run artifacts found in MLProject/mlruns."
             ls -R MLProject/mlruns
