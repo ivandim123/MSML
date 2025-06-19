@@ -1,54 +1,17 @@
-name: CI for ML Project (MLflow)
+1s
+Run # Ini adalah baris kunci untuk menginisialisasi shell untuk Conda
+  # Ini adalah baris kunci untuk menginisialisasi shell untuk Conda
+  # Pastikan jalur ke `etc/profile.d/conda.sh` benar.
+  # Atau, bisa juga `eval "$(conda shell hook)"` atau `source "$(conda info --base)/etc/profile.d/conda.sh"`
+  source /usr/share/miniconda/etc/profile.d/conda.sh
+  conda activate mlflow-env
+  shell: /usr/bin/bash -e {0}
+  env:
+    INPUT_RUN_POST: true
+    CONDA: /usr/share/miniconda
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+EnvironmentNameNotFound: Could not find conda environment: mlflow-env
+You can list all discoverable environments with `conda info --envs`.
 
-jobs:
-  build-and-run-mlflow:
-    runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Miniconda and create environment
-        uses: conda-incubator/setup-miniconda@v3
-        with:
-          auto-update-conda: true
-          python-version: 3.12
-          environment-file: MLProject/conda.yaml
-
-      - name: Initialize Conda Shell and Activate Environment
-        run: |
-          # Ini adalah baris kunci untuk menginisialisasi shell untuk Conda
-          # Pastikan jalur ke `etc/profile.d/conda.sh` benar.
-          # Atau, bisa juga `eval "$(conda shell hook)"` atau `source "$(conda info --base)/etc/profile.d/conda.sh"`
-          source /usr/share/miniconda/etc/profile.d/conda.sh
-          conda activate mlflow-env
-
-      - name: Conda info (for debugging)
-        run: |
-          conda info
-          conda env list
-          conda list
-
-      - name: Run MLflow Project
-        run: |
-          cd MLProject
-          mlflow run . -P data_path=HDS_preprocessing.csv
-
-      - name: Verify MLflow Run (Optional)
-        run: |
-          cd MLProject
-          if [ -d "mlruns" ]; then
-            echo "MLflow run artifacts found in mlruns."
-            ls -R mlruns
-          else
-            echo "MLflow run artifacts not found!"
-            exit 1
-          fi
+Error: Process completed with exit code 1.
