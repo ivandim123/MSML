@@ -21,30 +21,33 @@ jobs:
         with:
           auto-update-conda: true
           python-version: 3.12
-          environment-file: MLProject/conda.yaml # Buat lingkungan dari file ini
-          # Kita tidak menggunakan `activate-environment` di sini agar lebih manual kontrol
-          # agar kita bisa memastikan aktivasi di setiap `run` command.
+          environment-file: MLProject/conda.yaml
+
+      - name: Initialize Conda Shell and Activate Environment
+        run: |
+          # Ini adalah baris kunci untuk menginisialisasi shell untuk Conda
+          # Pastikan jalur ke `etc/profile.d/conda.sh` benar.
+          # Atau, bisa juga `eval "$(conda shell hook)"` atau `source "$(conda info --base)/etc/profile.d/conda.sh"`
+          source /usr/share/miniconda/etc/profile.d/conda.sh
+          conda activate mlflow-env
 
       - name: Conda info (for debugging)
-        # ✅ Selalu aktifkan lingkungan di setiap blok `run` jika tidak yakin sudah aktif
         run: |
-          conda activate mlflow-env # Aktifkan lingkungan di sini
           conda info
           conda env list
           conda list
 
       - name: Run MLflow Project
         run: |
-          conda activate mlflow-env # ✅ Aktifkan lingkungan di sini lagi
           cd MLProject
           mlflow run . -P data_path=HDS_preprocessing.csv
 
       - name: Verify MLflow Run (Optional)
         run: |
-          conda activate mlflow-env # ✅ Aktifkan lingkungan di sini lagi
-          if [ -d "MLProject/mlruns" ]; then
-            echo "MLflow run artifacts found in MLProject/mlruns."
-            ls -R MLProject/mlruns
+          cd MLProject
+          if [ -d "mlruns" ]; then
+            echo "MLflow run artifacts found in mlruns."
+            ls -R mlruns
           else
             echo "MLflow run artifacts not found!"
             exit 1
