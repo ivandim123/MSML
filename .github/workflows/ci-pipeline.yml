@@ -1,0 +1,58 @@
+name: CI for ML Project (MLflow)
+
+on:
+  push:
+    branches:
+      - main # Sesuaikan dengan nama branch utama Anda
+  pull_request:
+    branches:
+      - main # Sesuaikan dengan nama branch utama Anda
+
+jobs:
+  build-and-run-mlflow:
+    runs-on: ubuntu-latest # Menggunakan runner Ubuntu terbaru
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4 # Mengambil kode dari repositori
+
+      - name: Set up Miniconda
+        uses: conda-incubator/setup-miniconda@v3 # Action untuk menginstal Miniconda
+        with:
+          auto-update-conda: true
+          python-version: 3.12 # ✅ Menggunakan versi Python dari conda.yaml Anda
+          activate-environment: mlflow-env # ✅ Menggunakan nama lingkungan dari conda.yaml Anda
+
+      - name: Conda info (for debugging)
+        run: |
+          conda info
+          conda env list
+
+      - name: Create and activate Conda environment from conda.yaml
+        run: |
+          # Perhatikan: Perintah ini dijalankan dari root direktori 'Workflow-CI'
+          # sehingga path ke conda.yaml adalah 'MLProject/conda.yaml'
+          conda env create -f MLProject/conda.yaml --name mlflow-env
+          conda activate mlflow-env
+
+      - name: Run MLflow Project
+        # Jalankan proyek MLflow yang didefinisikan dalam file MLProject
+        # Pastikan Anda berada di direktori 'MLProject' untuk menjalankan `mlflow run .`
+        run: |
+          conda activate mlflow-env
+          cd MLProject # Masuk ke direktori yang berisi MLProject dan modelling.py
+          mlflow run . -P data_path=HDS_preprocessing.csv # ✅ Menjalankan MLflow Project
+        # Catatan: HDS_preprocessing.csv harus ada di folder MLProject saat ini
+
+      - name: Verify MLflow Run (Optional)
+        # Langkah opsional untuk memverifikasi bahwa run MLflow berhasil
+        # Anda mungkin perlu menginstal `mlflow` di luar lingkungan jika ingin menggunakan CLI di sini
+        # Atau Anda bisa memeriksa keberadaan folder `mlruns`
+        run: |
+          if [ -d "MLProject/mlruns" ]; then
+            echo "MLflow run artifacts found in MLProject/mlruns."
+            ls -R MLProject/mlruns # Lihat isinya
+          else
+            echo "MLflow run artifacts not found!"
+            exit 1 # Gagal jika mlruns tidak ditemukan
+          fi
