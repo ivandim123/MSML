@@ -1,5 +1,4 @@
 name: CI for ML Project (MLflow)
-
 on:
   push:
     branches:
@@ -11,52 +10,80 @@ on:
 jobs:
   build-and-run-mlflow:
     runs-on: ubuntu-latest
-
+    
+    defaults:
+      run:
+        shell: bash -l {0}  # ✅ Penting: Gunakan login shell untuk conda
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Cache Conda environment
-        uses: actions/cache@v4 # Menggunakan action cache
-        id: cache-conda-env # Memberikan ID agar bisa direferensikan
-        with:
-          path: |
-            /usr/share/miniconda/envs/mlflow-env # Path ke lingkungan Conda Anda
-            ~/.conda/pkgs # Path ke paket Conda cache
-          key: ${{ runner.os }}-conda-${{ hashFiles('MLProject/conda.yaml') }} # Kunci cache berdasarkan OS dan hash file conda.yaml
-          restore-keys: |
-            ${{ runner.os }}-conda-
-
-      - name: Set up Miniconda and activate environment
+      
+      - name: Set up Miniconda
         uses: conda-incubator/setup-miniconda@v3
         with:
           auto-update-conda: true
-          python-version: 3.12 # Pastikan sesuai dengan conda.yaml Anda
-          activate-environment: mlflow-env # Kembali menggunakan parameter ini
-          environment-file: MLProject/conda.yaml # ✅ Ini akan membuat/memperbarui lingkungan
-
-      - name: Conda info (for debugging)
-        # Lingkungan 'mlflow-env' seharusnya sudah aktif otomatis dari action setup-miniconda
-        # Tidak perlu `conda activate` manual lagi di sini
+          python-version: 3.12
+          activate-environment: mlflow-env
+          environment-file: MLProject/conda.yaml
+          auto-activate-base: false
+      
+      - name: Cache Conda environment
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/conda_pkgs_dir
+            ~/.conda/envs
+          key: ${{ runner.os }}-conda-${{ hashFiles('MLProject/conda.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-conda-
+      
+      - name: Verify conda environment and MLflow installation
         run: |
+          echo "Current conda environment:"
           conda info
+          echo "Active environment:"
           conda env list
-          conda list # Ini akan menampilkan paket yang terinstal di mlflow-env
-
+          echo "Python location:"
+          which python
+          echo "MLflow location:"
+          which mlflow || echo "MLflow not found in PATH"
+          echo "Installed packages:"
+          conda list | grep -E "(mlflow|python)"
+      
+      - name: Install MLflow if not present
+        run: |
+          if ! command -v mlflow &> /dev/null; then
+            echo "MLflow not found, installing..."
+            conda install -c conda-forge mlflow -y
+          else
+            echo "MLflow is already installed"
+          fi
+      
       - name: Run MLflow Project
-        # Karena `activate-environment` sudah mengaktifkannya, perintah ini akan berjalan di lingkungan yang benar.
         run: |
           cd MLProject
+          echo "Current directory: $(pwd)"
+          echo "MLflow version: $(mlflow --version)"
           mlflow run . -P data_path=HDS_preprocessing.csv
-
-      - name: Verify MLflow Run (Optional)
+      
+      - name: Verify MLflow Run
         run: |
-          # Perintah ini juga akan berjalan di lingkungan yang sudah aktif
-          cd MLProject # Pastikan ada di direktori MLProject jika perlu
+          cd MLProject
           if [ -d "mlruns" ]; then
-            echo "MLflow run artifacts found in mlruns."
-            ls -R mlruns
+            echo "✅ MLflow run artifacts found in mlruns."
+            ls -la mlruns/
+            # Tampilkan struktur direktori mlruns
+            find mlruns -type f -name "*.yaml" -o -name "*.json" -o -name "*.txt" | head -10
           else
-            echo "MLflow run artifacts not found!"
+            echo "❌ MLflow run artifacts not found!"
             exit 1
           fi
+      
+      - name: Upload MLflow artifacts (Optional)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mlflow-artifacts
+          path: MLProject/mlruns/
+          retention-days: 30
